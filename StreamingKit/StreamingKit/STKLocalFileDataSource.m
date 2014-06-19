@@ -37,7 +37,6 @@
 @interface STKLocalFileDataSource()
 {
     SInt64 position;
-    SInt64 length;
     AudioFileTypeID audioFileTypeHint;
 }
 @property (readwrite, copy) NSString* filePath;
@@ -129,25 +128,6 @@
     
     stream = CFReadStreamCreateWithFile(NULL, (__bridge CFURLRef)url);
     
-    NSError* fileError;
-    NSFileManager* manager = [[NSFileManager alloc] init];
-    NSDictionary* attributes = [manager attributesOfItemAtPath:filePath error:&fileError];
-
-    if (fileError)
-    {
-        CFReadStreamClose(stream);
-        CFRelease(stream);
-        stream = 0;
-        return;
-    }
-
-    NSNumber* number = [attributes objectForKey:@"NSFileSize"];
-    
-    if (number)
-    {
-        length = number.longLongValue;
-    }
-    
     [self reregisterForEvents];
 
     CFReadStreamOpen(stream);
@@ -160,7 +140,18 @@
 
 -(SInt64) length
 {
-    return length;
+    //-- SDS: reading length each time from disk
+    NSError* fileError;
+    NSFileManager* manager = [[NSFileManager alloc] init];
+    NSDictionary* attributes = [manager attributesOfItemAtPath:filePath error:&fileError];
+    
+    if (fileError)
+    {
+        return -1;
+    }
+    
+    NSNumber* number = [attributes objectForKey:@"NSFileSize"];
+    return number.longLongValue;
 }
 
 -(int) readIntoBuffer:(UInt8*)buffer withSize:(int)size
